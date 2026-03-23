@@ -127,8 +127,13 @@ const YOUTUBE_VIDEOS={
 let videoPlaying=false, videoPaused=false, currentVideoId='';
 const videoEl=document.getElementById('videoMonitor');
 const ytFrame=document.getElementById('ytPlayer');
+const EMBED_VIDEO_ENABLED=false;
 
 function updateVideoPosition(){
+  if(!EMBED_VIDEO_ENABLED){
+    videoEl.style.display='none';
+    return;
+  }
   if(!videoPlaying||!G||state!==S.GAME){videoEl.style.display='none';return;}
   // Find counter position in screen coords
   const counterItem=shopLayout.find(i=>i.id==='counter');
@@ -153,6 +158,14 @@ function updateVideoPosition(){
 }
 
 function startVideo(){
+  if(!EMBED_VIDEO_ENABLED){
+    videoPlaying=false;
+    videoPaused=false;
+    currentVideoId='';
+    ytFrame.src='';
+    videoEl.style.display='none';
+    return;
+  }
   const song=G?G.nowPlaying:'Titi Me Preguntó - Bad Bunny';
   const vid=YOUTUBE_VIDEOS[song]||'Cr8K88UcO0s';
   if(vid!==currentVideoId){
@@ -164,6 +177,7 @@ function startVideo(){
 }
 
 function toggleVideoPause(){
+  if(!EMBED_VIDEO_ENABLED) return;
   if(!videoPlaying){startVideo();return;}
   if(videoPaused){
     // Resume — reload iframe (simple approach)
