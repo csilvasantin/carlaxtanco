@@ -577,17 +577,21 @@ let ledOffset=0;
 
 // ── LAYOUT EDITOR ────────────────────────────────────────────
 // Furniture layout — editable positions
+const LAYOUT_STORAGE_KEYS={
+  user:'carlaxtanco_layout_user',
+  backup:'carlaxtanco_layout_backup',
+};
 const DEFAULT_LAYOUT=[
-  {id:'counter',type:'counter',col:1,row:2,sx:1,sy:1,label:'Mostrador+Caja+PC'},
-  {id:'shelves',type:'shelves',col:4,row:1,sx:1,sy:1,label:'Estantería'},
-  {id:'wineRack',type:'wineRack',col:6,row:1,sx:1,sy:1,label:'Botellero'},
-  {id:'lottery',type:'lottery',col:7,row:2,sx:1,sy:1,label:'Lotería'},
-  {id:'vending',type:'vending',col:9,row:2,sx:1,sy:1,label:'Vending'},
-  {id:'magazines',type:'magazines',col:2,row:3,sx:1,sy:1,label:'Revistero'},
-  {id:'manager',type:'manager',col:5,row:4,sx:1,sy:1,label:'Escritorio'},
-  {id:'plant1',type:'plant',col:0,row:1,sx:1,sy:1,label:'Planta 1'},
+  {id:'counter',type:'counter',col:2,row:3,sx:1,sy:1,label:'Mostrador+Caja+PC'},
+  {id:'shelves',type:'shelves',col:0,row:4,sx:1,sy:1,label:'Estantería'},
+  {id:'wineRack',type:'wineRack',col:4,row:2,sx:1,sy:1,label:'Botellero'},
+  {id:'lottery',type:'lottery',col:6,row:3,sx:1,sy:1,label:'Lotería'},
+  {id:'vending',type:'vending',col:5,row:6,sx:1,sy:1,label:'Vending'},
+  {id:'magazines',type:'magazines',col:2,row:6,sx:1,sy:1,label:'Revistero'},
+  {id:'manager',type:'manager',col:9,row:4,sx:1,sy:1,label:'Escritorio'},
+  {id:'plant1',type:'plant',col:1,row:3,sx:1,sy:1,label:'Planta 1'},
   {id:'plant3',type:'plant',col:0,row:5,sx:1,sy:1,label:'Planta 2'},
-  {id:'floorLamp',type:'floorLamp',col:10,row:5,sx:1,sy:1,label:'Lámpara pie'},
+  {id:'floorLamp',type:'floorLamp',col:8,row:6,sx:1,sy:1,label:'Lámpara pie'},
   {id:'led',type:'led',col:0,row:0,sx:1,sy:1,label:'LED Banner'},
 ];
 let shopLayout=JSON.parse(JSON.stringify(DEFAULT_LAYOUT));
@@ -602,9 +606,9 @@ let edHoverTile=null; // {col,row} under mouse
 function loadLayout(){
   try{
     // Try localStorage
-    let d=localStorage.getItem('xtanco_layout_user');
+    let d=localStorage.getItem(LAYOUT_STORAGE_KEYS.user);
     // Fallback: try IndexedDB-style backup in localStorage with alt key
-    if(!d) d=localStorage.getItem('xtanco_layout_backup');
+    if(!d) d=localStorage.getItem(LAYOUT_STORAGE_KEYS.backup);
     if(d){
       const saved=JSON.parse(d);
       if(Array.isArray(saved)&&saved.length>0){
@@ -629,8 +633,8 @@ function loadLayout(){
 function saveLayout(){
   const data=JSON.stringify(shopLayout);
   try{
-    localStorage.setItem('xtanco_layout_user',data);
-    localStorage.setItem('xtanco_layout_backup',data); // backup key
+    localStorage.setItem(LAYOUT_STORAGE_KEYS.user,data);
+    localStorage.setItem(LAYOUT_STORAGE_KEYS.backup,data); // backup key
     console.log('[Layout] Saved ('+shopLayout.length+' items)');
   }catch(e){console.log('[Layout] Save error:',e);}
 }
@@ -639,8 +643,8 @@ function resetLayout(){
   console.log('[Layout] Reset = saved current as default');
 }
 function resetToFactory(){
-  localStorage.removeItem('xtanco_layout_user');
-  localStorage.removeItem('xtanco_layout_backup');
+  localStorage.removeItem(LAYOUT_STORAGE_KEYS.user);
+  localStorage.removeItem(LAYOUT_STORAGE_KEYS.backup);
   shopLayout=JSON.parse(JSON.stringify(DEFAULT_LAYOUT));
   console.log('[Layout] Factory reset');
 }
@@ -2694,8 +2698,17 @@ function drawAltadisTFT(){
   cx.setTransform(ax,ay,bx,by,tl.x,tl.y);
   const cX=vW/2, cY=vH/2;
   const sH=vH;
+  const policeInside=G&&G.custs&&G.custs.some(c=>c.kind==='police');
 
-  if(G&&G.tftParty>0){
+  if(policeInside){
+    // During Guardia Civil visit, the wall screen powers down completely.
+    cx.fillStyle='#000000';cx.fillRect(0,0,vW,vH);
+    cx.strokeStyle='#111111';cx.lineWidth=0.5;
+    cx.strokeRect(6,6,vW-12,vH-12);
+    cx.fillStyle='#1b1b1b';cx.font='bold 8px monospace';cx.textAlign='center';
+    cx.fillText('SIN SENAL',cX,52);
+    cx.textAlign='left';
+  } else if(G&&G.tftParty>0){
     // ── PARTY!! on Admira screen ──
     const flash=Math.sin(tt*0.15)>0;
     cx.fillStyle=flash?'#ff22aa':'#aa1188';cx.fillRect(0,0,vW,vH);
@@ -3343,14 +3356,22 @@ function drawIsoStaff(s){
 function drawIsoCust(c){
   if(c.kind==='police'){
     const walkFrame=c.fr||0;
-    chibi(c.x,c.y,c.dir||1,0,0,walkFrame,c.st!=='browse',tt);
-    // Police cap and uniform details
+    chibi(c.x,c.y,c.dir||1,5,3,walkFrame,c.st!=='browse',tt);
+    // Replace the generic shirt with a proper police uniform.
+    r(c.x+1,c.y+8,12,11,'#1f3566');
+    r(c.x+4,c.y+10,5,2,'#3d67b1');
+    r(c.x-1,c.y+9,3,8,'#1a2d57');
+    r(c.x+12,c.y+9,3,8,'#1a2d57');
+    r(c.x+1,c.y+17,12,2,'#111827');
+    r(c.x+5,c.y+11,3,3,'#d8be5b');
+    r(c.x+4,c.y+14,1,3,'#8ec5ff');
+    r(c.x+9,c.y+14,1,3,'#8ec5ff');
+    // Police cap, intentionally oversized so it reads clearly.
     r(c.x-1,c.y-7,16,3,'#18325f');
     r(c.x+2,c.y-10,10,4,'#224b88');
+    r(c.x+1,c.y-9,12,2,'#2e5aa4');
     r(c.x+4,c.y-4,6,1,'#0f1d38');
     tx('✦',c.x+7,c.y-6,'#f1d26b',6,'center');
-    r(c.x+5,c.y+11,3,3,'#d8be5b');
-    r(c.x+1,c.y+17,12,2,'#101820');
     if(c.inspectTimer>0&&Math.floor(c.inspectTimer/30)%2===0){
       const msg='POLICIA';
       const bw=msg.length*6+8,bh=14,bx2=c.x+7-bw/2,by2=c.y-24;
